@@ -1,0 +1,29 @@
+{
+  "target": "acetowhite annotation only",
+  "source_rgb": [
+    255,
+    0,
+    255
+  ],
+  "colour_distance_threshold": 80.0,
+  "image_size": [
+    384,
+    384
+  ],
+  "n_images": 297,
+  "n_cases": 100,
+  "n_acetowhite_images": 195,
+  "n_no_acetowhite_images": 102,
+  "by_split": {
+    "size": {
+      "test": 41,
+      "train": 213,
+      "validation": 43
+    },
+    "sum": {
+      "test": 25,
+      "train": 142,
+      "validation": 28
+    }
+  }
+}

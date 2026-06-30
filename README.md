@@ -1,138 +1,148 @@
-# Colposcopy Digital Atlas Dataset – Processed Version
+# Colposcopy Digital Atlas - Processed Datasets
 
-This repository contains a processed version of the **IARC Colposcopy Atlas Dataset**, prepared for machine learning experiments using **patient-wise train/validation/test splitting** to minimize data leakage between dataset subsets.
+This repository contains **two processed colposcopy datasets** together with the
+Python preprocessing code used to prepare them. The original classification
+dataset has been **extended with a segmentation dataset and segmentation
+preprocessing workflow**.
 
-## Overview
+## Included datasets
 
-The original dataset was collected from the IARC Screening Group Atlas of Colposcopy using the original scraper implementation available at:
+### 1. Patient-level classification dataset
+
+Directory: `colposcopy-digital-atlas-dataset-pac/`
+
+This dataset is based on the IARC Colposcopy Digital Atlas data collected with
+the original scraper available at:
 
 https://github.com/naghim/colposcopy-digital-atlas-dataset
 
-This repository provides a standardized dataset structure suitable for deep learning workflows.
+The images are organized into patient-wise training, validation, and test
+subsets. Keeping every image from the same patient in a single subset reduces
+the risk of data leakage.
 
-The preprocessing pipeline performs:
+The processing includes:
 
-* Automatic discovery of patient cases (`case_*` folders)
-* Patient-wise train/validation/test splitting
-* Optional center square cropping of images
-* Image resizing to a fixed resolution
-* RGB conversion of all images
-* Label extraction from the original dataset structure
-* Generation of split-specific label files (`train_labels.csv`, `val_labels.csv`, `test_labels.csv`)
-* Organization of processed images into a standardized directory structure
+- discovery of patient case directories;
+- patient-wise train/validation/test splitting;
+- optional center-square cropping;
+- resizing to a fixed resolution;
+- RGB conversion;
+- extraction of patient-level labels;
+- generation of `train_labels.csv`, `val_labels.csv`, and `test_labels.csv`.
 
-The default preprocessing configuration uses:
+The binary labels are encoded as:
 
-* Training split: 70%
-* Validation split: 15%
-* Test split: 15%
-* Random seed: 42
-* Image size: 224 × 224 pixels
-* Center square cropping
+- `0`: low-grade cervical lesion;
+- `1`: high-grade cervical lesion.
 
-## Dataset Structure
+The dataset was prepared with `preprocess_dataset.py`.
+
+### 2. Acetowhite-area segmentation dataset
+
+Directory: `processed_annocerv_384_acetowhite/`
+
+This repository is extended with a processed AnnoCerv segmentation dataset for
+the pixel-level segmentation of acetowhite regions. It contains 297 colposcopy
+images from 100 cases, resized to 384 x 384 pixels, with corresponding binary
+acetowhite masks.
+
+The segmentation data are split patient-wise into:
+
+- 213 training images;
+- 43 validation images;
+- 41 test images.
+
+Each subset contains:
+
+- resized colposcopy images in `images/`;
+- binary acetowhite masks in `masks/`;
+- a `metadata.csv` file describing the samples.
+
+The root-level `metadata.csv` combines all subsets, while `manifest.json`
+records the processing configuration and dataset statistics.
+
+The segmentation workflow is implemented in
+`preprocess_dataset_segmentation.py`. In addition to dataset discovery and
+patient-wise splitting, it provides mask processing, image-mask augmentation,
+PyTorch dataset and data-loader utilities, and summary functions.
+
+## Repository structure
 
 ```text
-paciens-data/
-└── colposcopy-digital-atlas-dataset-pac/
-    ├── train/
-    │   ├── case_AAAN/
-    │   ├── case_AABM/
-    │   └── ...
-    ├── val/
-    │   ├── case_AABG/
-    │   └── ...
-    ├── test/
-    │   ├── case_ABCD/
-    │   └── ...
-    ├── train_labels.csv
-    ├── val_labels.csv
-    └── test_labels.csv
+colposcopy-digital-atlas-processed/
+|-- colposcopy-digital-atlas-dataset-pac/
+|   |-- train/
+|   |-- val/
+|   |-- test/
+|   |-- train_labels.csv
+|   |-- val_labels.csv
+|   `-- test_labels.csv
+|-- processed_annocerv_384_acetowhite/
+|   |-- train/
+|   |   |-- images/
+|   |   |-- masks/
+|   |   `-- metadata.csv
+|   |-- validation/
+|   |   |-- images/
+|   |   |-- masks/
+|   |   `-- metadata.csv
+|   |-- test/
+|   |   |-- images/
+|   |   |-- masks/
+|   |   `-- metadata.csv
+|   |-- metadata.csv
+|   `-- manifest.json
+|-- preprocess_dataset.py
+|-- preprocess_dataset_segmentation.py
+`-- README.md
 ```
 
-Each `case_*` directory contains all images associated with a single patient case.
+## Classification preprocessing
 
-The CSV files contain patient-level labels corresponding to each dataset split.
-
-## Label Files
-
-The repository provides split-specific label files:
-
-* `train_labels.csv`
-* `val_labels.csv`
-* `test_labels.csv`
-
-Each CSV file contains one row per patient case:
-
-```csv
-case_id,label
-case_AAEM,0
-case_AACE,1
-case_AACC,1
-...
-```
-
-### Columns
-
-| Column    | Description                    |
-| --------- | ------------------------------ |
-| `case_id` | Unique patient case identifier |
-| `label`   | Binary classification label    |
-
-### Label Encoding
-
-* `0` → Low-grade cervical lesion
-* `1` → High-grade cervical lesion
-
-Labels are assigned at the **patient level**, meaning that all images belonging to the same case share the same diagnostic label.
-
-## Processing Pipeline
-
-The dataset was generated using the preprocessing script:
+Example:
 
 ```bash
-python scripts/process_dataset.py \
+python preprocess_dataset.py \
     --source path/to/original_dataset \
-    --dest path/to/output_dataset
+    --dest colposcopy-digital-atlas-dataset-pac \
+    --image-size 224 \
+    --crop-mode center \
+    --train 0.70 \
+    --val 0.15 \
+    --seed 42
 ```
 
-### Available Arguments
+The remaining 15% of cases form the test subset.
 
-| Argument       | Description                                | Default  |
-| -------------- | ------------------------------------------ | -------- |
-| `--source`     | Path to the original dataset               | Required |
-| `--dest`       | Output directory for the processed dataset | Required |
-| `--image-size` | Output image resolution                    | `224`    |
-| `--crop-mode`  | Cropping strategy (`center`, `none`)       | `center` |
-| `--train`      | Training split ratio                       | `0.70`   |
-| `--val`        | Validation split ratio                     | `0.15`   |
-| `--seed`       | Random seed for reproducibility            | `42`     |
+## Segmentation preprocessing
 
-The preprocessing pipeline performs:
+The reusable segmentation functions can be imported from:
 
-* Parsing of the original dataset structure
-* Patient-level data splitting to avoid data leakage
-* Center cropping and image resizing
-* RGB conversion of all images
-* Label extraction and CSV generation
-* Organization of images into training, validation, and test subsets
+```python
+from preprocess_dataset_segmentation import (
+    AnnoCervSegmentationDataset,
+    SplitConfig,
+    export_processed_dataset,
+    load_processed_splits,
+)
+```
+
+The default split configuration is 70% training, 15% validation, and 15% test,
+with random seed 42. Splitting is performed at case level.
 
 ## Requirements
 
-Python 3.8+
-
-Required packages:
+The classification preprocessing requires Python 3.8 or newer and Pillow.
+The segmentation workflow additionally uses NumPy, pandas, and optionally
+PyTorch for dataset and data-loader functionality.
 
 ```bash
-pip install -r requirements.txt
-```
-
-Example `requirements.txt`:
-
-```text
-Pillow>=9.0.0
+pip install Pillow numpy pandas torch
 ```
 
 ## Reproducibility
 
-The dataset splits are generated using a fixed random seed (`seed=42` by default) to ensure reproducibility of experiments. Patient-wise splitting is used to prevent information leakage between training, validation, and test sets.
+Both workflows use patient/case-wise splitting and a fixed random seed by
+default. This makes experiments reproducible and prevents images from the same
+patient or case from being distributed across training, validation, and test
+subsets.
